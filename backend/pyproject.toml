@@ -1,0 +1,34 @@
+[project]
+name = "content-agent"
+version = "0.1.0"
+requires-python = ">=3.12,<3.14"
+dependencies = [
+  "crewai",
+  "fastapi",
+  "uvicorn[standard]",
+  "sqlmodel",
+  "mcp[cli]",
+  "httpx",
+  "trafilatura",
+  "ddgs",
+  "textstat",
+  "python-dotenv",
+]
+
+[project.optional-dependencies]
+dev = ["pytest", "pytest-asyncio"]
+
+[project.scripts]
+content-mcp = "content_agent.mcp_server:main"
+content-api = "content_agent.api:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

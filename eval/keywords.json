@@ -1,0 +1,22 @@
+[
+  {"topic": "chuyển đổi số cho doanh nghiệp nhỏ", "audience": "chủ shop online", "language": "vi"},
+  {"topic": "cách học lập trình hiệu quả cho người mới", "audience": "sinh viên năm nhất", "language": "vi"},
+  {"topic": "tiết kiệm tiền hàng tháng cho người đi làm", "audience": "nhân viên văn phòng trẻ", "language": "vi"},
+  {"topic": "chăm sóc da mùa hanh khô", "audience": "phụ nữ 25-35 tuổi", "language": "vi"},
+  {"topic": "du lịch Hải Phòng tự túc", "audience": "du khách trẻ", "language": "vi"},
+  {"topic": "marketing bằng video ngắn", "audience": "chủ cửa hàng nhỏ", "language": "vi"},
+  {"topic": "ăn sáng lành mạnh cho dân văn phòng", "audience": "nhân viên văn phòng", "language": "vi"},
+  {"topic": "học tiếng Anh giao tiếp mỗi ngày", "audience": "người đi làm bận rộn", "language": "vi"},
+  {"topic": "bảo mật tài khoản ngân hàng online", "audience": "người dùng phổ thông", "language": "vi"},
+  {"topic": "khởi nghiệp với số vốn nhỏ", "audience": "sinh viên mới ra trường", "language": "vi"},
+  {"topic": "remote work productivity tips", "audience": "software engineers", "language": "en"},
+  {"topic": "how to start a personal budget", "audience": "young professionals", "language": "en"},
+  {"topic": "beginner guide to running a 5k", "audience": "adults new to running", "language": "en"},
+  {"topic": "email marketing for small businesses", "audience": "small business owners", "language": "en"},
+  {"topic": "benefits of meditation for stress", "audience": "busy professionals", "language": "en"},
+  {"topic": "how to learn Python quickly", "audience": "career changers", "language": "en"},
+  {"topic": "sustainable travel tips", "audience": "eco-conscious travelers", "language": "en"},
+  {"topic": "cybersecurity basics for freelancers", "audience": "freelancers", "language": "en"},
+  {"topic": "healthy meal prep for the week", "audience": "students", "language": "en"},
+  {"topic": "building a personal brand on LinkedIn", "audience": "early-career professionals", "language": "en"}
+]
