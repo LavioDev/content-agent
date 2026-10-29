@@ -27,6 +27,14 @@ Slug: ${c.slug}
 Từ khoá phụ: ${c.keywords?.join(', ')}` : ''
 })
 
+// Nguồn từ Researcher + đánh dấu nguồn nào thật sự được chèn link trong blog
+const sources = computed(() => (content.value?.sources ?? []).map((s: any) => ({
+  ...s,
+  host: new URL(s.url).hostname.replace(/^www\./, ''),
+  cited: content.value.blog_md.includes(`](${s.url})`),
+})))
+const sourcesText = computed(() => sources.value.map((s: any) => `- ${s.title}: ${s.url}`).join('\n'))
+
 async function select(id: number) {
   selectedId.value = id
   try {
@@ -136,6 +144,7 @@ onBeforeUnmount(() => es?.close())
             <TabsTrigger value="blog">Blog</TabsTrigger>
             <TabsTrigger value="social">Social</TabsTrigger>
             <TabsTrigger value="seo">SEO</TabsTrigger>
+            <TabsTrigger value="sources">Nguồn ({{ sources.length }})</TabsTrigger>
           </TabsList>
           <TabsContent value="blog">
             <Card class="relative p-6 pr-12"><CopyBtn :text="content.blog_md" /><article class="prose-lite"><MDC :value="content.blog_md" /></article></Card>
@@ -155,6 +164,28 @@ onBeforeUnmount(() => es?.close())
               <p><b>Meta description:</b> {{ content.meta_description || '—' }}</p>
               <p><b>Slug:</b> {{ content.slug || '—' }}</p>
               <p><b>Từ khoá phụ:</b> {{ content.keywords?.join(', ') || '—' }}</p>
+            </Card>
+          </TabsContent>
+          <TabsContent value="sources">
+            <Card class="relative gap-0 p-0 pr-12">
+              <CopyBtn v-if="sources.length" :text="sourcesText" />
+              <ol v-if="sources.length" class="divide-y">
+                <li v-for="(s, i) in sources" :key="s.url" class="flex gap-3 p-4">
+                  <span class="text-sm tabular-nums text-muted-foreground">{{ i + 1 }}.</span>
+                  <div class="min-w-0 space-y-1">
+                    <div class="flex flex-wrap items-center gap-2">
+                      <a :href="s.url" target="_blank" rel="noopener noreferrer" class="text-sm font-medium hover:underline">{{ s.title }}</a>
+                      <span
+                        class="rounded-full px-2 py-0.5 text-xs"
+                        :class="s.cited ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400' : 'bg-muted text-muted-foreground'"
+                      >{{ s.cited ? 'Đã trích dẫn' : 'Chưa dùng trong bài' }}</span>
+                    </div>
+                    <div class="text-xs text-muted-foreground">{{ s.host }}</div>
+                    <p v-if="s.summary" class="text-sm">{{ s.summary }}</p>
+                  </div>
+                </li>
+              </ol>
+              <p v-else class="p-4 text-sm text-muted-foreground">Không tìm được nguồn nào cho bài này.</p>
             </Card>
           </TabsContent>
         </Tabs>
