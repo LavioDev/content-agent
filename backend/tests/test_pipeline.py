@@ -66,13 +66,24 @@ async def test_qa_failure_loops_back_to_editor(fake):
     assert services.get_content(job["content_id"])["qa_report"]["round"] == 2
 
 
-async def test_qa_gives_up_after_max_rounds(fake):
+async def test_qa_stops_early_when_fix_does_not_help(fake):
     calls, mp = fake
     set_seo(mp, [BAD] * 5)
     job_id = await run()
     c = services.get_content(services.get_job(job_id)["content_id"])
     assert c["status"] == "pending_review" and not c["qa_report"]["passed"]
-    assert c["qa_report"]["round"] == 3 and calls.count("edit") == 3  # 1 + 2 vòng sửa
+    # vòng sửa 1 không tăng điểm -> dừng ở vòng 2 thay vì chạy hết 3 vòng
+    assert c["qa_report"]["round"] == 2 and c["qa_report"]["stopped_early"] and calls.count("edit") == 2
+
+
+async def test_qa_fixes_name_the_keyword_and_long_sentences(fake):
+    calls, mp = fake
+    long_sentence = " ".join(["chữ"] * 60) + "."
+    set_seo(mp, ["# Bài viết\n\n" + "\n\n".join([long_sentence] * 10)] * 5)
+    job_id = await run()
+    fixes = services.get_content(services.get_job(job_id)["content_id"])["qa_report"]["fixes"]
+    assert any(f'"{KW}"' in f and "H1" in f for f in fixes)
+    assert any(long_sentence[:50] in f for f in fixes)
 
 
 async def test_step_failure_marks_job_and_content_failed(fake):
@@ -162,3 +173,12 @@ async def test_content_jobs_history_and_delete(fake):
         services.get_content(cid)
     with db.session() as s:
         assert not s.exec(select(db.RunStep)).all() and not s.exec(select(db.Job)).all()
+
+
+def test_fixes_ask_to_cite_known_sources():
+    c = db.Content(job_id=0, topic="x", focus_keyword=KW, blog_md=make_article(links=False),
+                   sources=[{"title": "Báo cáo", "url": "https://example.com/r"}], **GOOD_META, image_prompts=GOOD_IMAGES)
+    services.rescore(c)
+    assert any("[Báo cáo](https://example.com/r)" in f for f in pipeline._fixes(c))
+    c.sources = []  # không có nguồn thì không bắt Editor bịa link
+    assert not any("Cite" in f for f in pipeline._fixes(c))

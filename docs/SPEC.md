@@ -209,7 +209,7 @@ Keyword tiếng Việt so khớp cả bản có dấu và không dấu, không p
 ### 7.2 Readability
 
 - **EN**: Flesch Reading Ease (`textstat`), đạt khi ≥ 60.
-- **VN**: điểm 0–100 tự định nghĩa từ độ dài câu trung bình (mục tiêu ≤ 20 từ), độ dài đoạn (≤ 4 câu), tỉ lệ câu > 35 từ. Công thức ghi trong code và báo cáo.
+- **VN**: điểm 0–100 tự định nghĩa, đếm theo **âm tiết** (tách theo khoảng trắng, ~1.4 âm tiết/từ): câu trung bình ≤ 22 âm tiết, đoạn ≤ 4 câu, tỉ lệ câu > 40 âm tiết. Ngưỡng chọn theo kinh nghiệm, cần hiệu chỉnh lại với human rating. Lịch sử thay đổi: [progress/issues.md](progress/issues.md).
 
 ## 8. Mô hình dữ liệu
 

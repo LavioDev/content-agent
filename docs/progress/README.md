@@ -4,6 +4,8 @@ Theo dõi tiến độ theo [PLAN.md](../PLAN.md) và [SPEC.md](../SPEC.md). M�
 
 Ký hiệu: ⬜ chưa bắt đầu · ⏳ đang làm · ✅ xong · ⚠️ bị chặn
 
+Vấn đề đã ghi nhận và cách sửa: [issues.md](issues.md)
+
 ## Tổng quan mốc
 
 | Tuần | Mốc | Trạng thái | Ghi chú |

@@ -50,6 +50,15 @@ def test_readability_vi_short_vs_long_sentences():
     assert not long["passed"]
 
 
+def test_readability_vi_counts_syllables_not_words():
+    # câu 20 âm tiết (~14 từ thật) là câu bình thường tiếng Việt, không bị trừ điểm
+    sentence = " ".join(["âm"] * 20) + "."
+    normal = "\n\n".join(f"{sentence} {sentence}" for _ in range(5))
+    r = score_readability(normal, "vi")
+    assert r["score"] == 100 and r["details"]["long_examples"] == []
+    assert score_readability(" ".join(["âm"] * 50) + ".", "vi")["details"]["long_examples"]
+
+
 def test_readability_en_uses_flesch():
     r = score_readability("The cat sat on the mat. It was a sunny day. We had fun.", "en")
     assert "flesch_reading_ease" in r["details"] and r["passed"]

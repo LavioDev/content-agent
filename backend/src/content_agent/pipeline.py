@@ -54,6 +54,35 @@ async def _step(job_id: int, agent: str, fn, *args, note: str = ""):
     return value
 
 
+def _fixes(c: db.Content) -> list[str]:
+    """Lệnh sửa cụ thể cho Editor. Chỉ nêu tên mục trượt thì Editor không biết sửa gì (xem docs/progress/issues.md #1)."""
+    kw, d = c.focus_keyword, c.seo_detail
+    failed = {i["id"] for i in d["items"] if not i["passed"]}
+    target = max(3, round(d["word_count"] * 1.5 / 100 / max(len(kw.split()), 1)))
+    out = []
+    if "kw_h1" in failed:
+        out.append(f'Rewrite the H1 title so it contains the exact phrase "{kw}".')
+    if "kw_first100" in failed:
+        out.append(f'Put the exact phrase "{kw}" in the first sentence of the article.')
+    if "kw_h2" in failed:
+        out.append(f'Rewrite one H2 heading so it contains the exact phrase "{kw}".')
+    if "density" in failed:
+        how = "too rarely" if d["density"] < 0.5 else "too often (replace some with pronouns or synonyms)"
+        out.append(f'The exact phrase "{kw}" appears {how} ({d["density"]}%); use it about {target} times in total.')
+    if "length" in failed:
+        out.append(f"The article has {d['word_count']} words; expand the thinnest sections with concrete examples to reach 1200+.")
+    if "h2_count" in failed:
+        out.append("Organise the content into at least 3 H2 sections.")
+    if "ext_links" in failed and c.sources:
+        out.append("Cite these sources as Markdown links inside the sentences that use their facts:\n"
+                   + "\n".join(f"- [{s['title']}]({s['url']})" for s in c.sources))
+    r = d["readability"]
+    if not r["passed"]:
+        out.append("Readability is too low. Split each of these long sentences into 2-3 short ones:\n"
+                   + "\n".join(f"- {s}" for s in r["details"].get("long_examples", [])))
+    return out
+
+
 def evaluate(c: db.Content) -> dict:
     """Kiểm tra bằng luật cứng; pass khi mọi mục đạt."""
     services.rescore(c)
@@ -72,6 +101,7 @@ def evaluate(c: db.Content) -> dict:
     return {
         "passed": not problems,
         "problems": problems,
+        "fixes": _fixes(c),
         "seo_score": c.seo_score,
         "readability_score": c.readability_score,
         "word_count": len(words(c.blog_md)),
@@ -106,7 +136,7 @@ async def run_job(job_id: int) -> None:
             feedback = inp["instructions"]
 
         if variant != "no_editor" or feedback:
-            blog = await _step(job_id, "editor", steps.edit, blog, lang, tone, feedback)
+            blog = await _step(job_id, "editor", steps.edit, blog, lang, tone, feedback, keyword)
             _save(cid, blog_md=blog)
 
         jobs = [
@@ -121,6 +151,7 @@ async def run_job(job_id: int) -> None:
         _save(cid, social=soc, image_prompts=imgs, **seo_out)
 
         max_rounds = 0 if variant == "no_qa_loop" else config.MAX_QA_ROUNDS
+        prev = None
         for rnd in range(max_rounds + 1):
             with db.session() as s:
                 c = s.get(db.Content, cid)
@@ -128,10 +159,16 @@ async def run_job(job_id: int) -> None:
                 blog_now = c.blog_md
             issues = await _step(job_id, "qa", steps.qa, report, blog_now, lang, note=f"round {rnd + 1}")
             report |= {"issues": issues, "round": rnd + 1}
+            score = (report["seo_score"], report["readability_score"])
+            # vòng sửa trước không làm điểm nào tăng -> sửa tiếp chỉ tốn thời gian/tiền
+            if prev and score[0] <= prev[0] and score[1] <= prev[1]:
+                report["stopped_early"] = True
+                break
             if report["passed"] or rnd == max_rounds:
                 break
-            fb = "\n".join(report["problems"] + issues)
-            blog = await _step(job_id, "editor", steps.edit, blog_now, lang, tone, fb, note=f"QA fix {rnd + 1}")
+            prev = score
+            fb = "\n".join(f"{i + 1}. {f}" for i, f in enumerate(report["fixes"] + issues))
+            blog = await _step(job_id, "editor", steps.edit, blog_now, lang, tone, fb, keyword, note=f"QA fix {rnd + 1}")
             seo_out = await _step(job_id, "seo", steps.seo, blog, keyword, keywords, lang, note=f"after QA fix {rnd + 1}")
             _save(cid, **seo_out)
 

@@ -14,28 +14,43 @@ def style_guide(name: str) -> str:
 
 
 def research(topic: str, audience: str, language: str, num_sources: int = 5):
-    hits = search(topic, language, num_sources)
+    # Bước 1: người dùng hay gõ câu lệnh ("tìm hiểu về X và viết tôi bài...") -> tách chủ đề + từ khoá trước khi search
+    plan, usage = llm.run_json(
+        "researcher",
+        f"User request: {topic}\nAudience: {audience}\nLanguage: {LANG[language]}\n\n"
+        "Return a JSON object with keys: "
+        '"subject" (the real subject of the article, without instruction words like "write me", "viết tôi bài", "tìm hiểu về"), '
+        '"focus_keyword" (2-4 words in the article language that people actually type into Google; it must read naturally '
+        'inside a sentence and a heading without inserting extra words, e.g. "lịch sử ESP32" not "lịch sử hình thành ESP32"), '
+        '"search_query" (the best web search query for this subject).',
+        "A single JSON object",
+        temperature=0.2,
+    )
+    subject = str(plan.get("subject") or topic)
+    keyword = str(plan.get("focus_keyword") or subject)
+    hits = search(str(plan.get("search_query") or subject), language, num_sources)
     with ThreadPoolExecutor(max_workers=5) as ex:
         pages = list(ex.map(lambda h: fetch_page(h["url"]), hits))
     material = "\n\n".join(
         f"[{i + 1}] {h['title']} ({h['url']})\n{h['snippet']}\n{p[:1500]}" for i, (h, p) in enumerate(zip(hits, pages))
     ) or "(no search results available — rely on general knowledge and say so in the outline notes)"
-    data, usage = llm.run_json(
+    data, u = llm.run_json(
         "researcher",
-        f"Topic: {topic}\nAudience: {audience}\nWrite the outline in {LANG[language]}.\n\n"
+        f"Subject: {subject}\nFocus keyword: {keyword}\nAudience: {audience}\nWrite the outline in {LANG[language]}.\n\n"
         f"Search material:\n{material}\n\n"
         "Return a JSON object with keys: "
-        '"focus_keyword" (2-4 words, the main search phrase, in the article language), '
         '"keywords" (3-6 secondary keywords), '
-        '"outline" (list of 5-7 section headings; the first is the intro, the last the conclusion), '
+        '"outline" (list of 5-7 section headings; the first is the intro, the last the conclusion; '
+        "one of the middle headings contains the exact focus keyword), "
         '"sources" (list of {"title","url","summary"} chosen ONLY from the material above; summary = 1-2 sentences of usable facts).',
         "A single JSON object",
     )
+    usage += u
     # chỉ giữ nguồn có URL thật nằm trong kết quả search -> không bịa link
     real = {h["url"] for h in hits}
     data["sources"] = [s for s in data.get("sources", []) if s.get("url") in real]
-    data.setdefault("focus_keyword", topic)
-    data["outline"] = [str(x) for x in data.get("outline", [])] or [topic]
+    data["subject"], data["focus_keyword"] = subject, keyword
+    data["outline"] = [str(x) for x in data.get("outline", [])] or [subject]
     return data, usage
 
 
@@ -43,8 +58,12 @@ def write(research_data: dict, topic: str, audience: str, tone: str, language: s
     sources = "\n".join(f"- {s['title']} ({s['url']}): {s.get('summary', '')}" for s in research_data["sources"]) or "(none)"
     return llm.run(
         "writer",
-        f"Write a blog post in {LANG[language]} about: {topic}\nAudience: {audience}\nTone: {tone}\n"
-        f"Focus keyword: {research_data['focus_keyword']} (secondary: {', '.join(research_data.get('keywords', []))})\n"
+        f"Write a blog post in {LANG[language]} about: {research_data.get('subject', topic)}\nAudience: {audience}\nTone: {tone}\n"
+        f"Focus keyword: \"{research_data['focus_keyword']}\" (secondary: {', '.join(research_data.get('keywords', []))})\n"
+        "Use the focus keyword EXACTLY (same words, same order, nothing inserted) in the H1, in the first sentence "
+        "and in one H2, then 3-6 more times in the body.\n"
+        "Whatever the tone, keep sentences short: under 20 words on average and never over 30 words. "
+        "Tone changes word choice, not sentence length.\n"
         f"Length: AT LEAST {int(word_count * 1.1)} words. Do not stop early.\n"
         "Outline (use as H2 sections, in order):\n"
         + "\n".join(f"{i + 1}. {h}" for i, h in enumerate(research_data["outline"]))
@@ -56,12 +75,14 @@ def write(research_data: dict, topic: str, audience: str, tone: str, language: s
     )
 
 
-def edit(blog_md: str, language: str, tone: str, feedback: str = ""):
+def edit(blog_md: str, language: str, tone: str, feedback: str = "", focus_keyword: str = ""):
     return llm.run(
         "editor",
-        f"Edit this {LANG[language]} article. Fix grammar, spelling, missing spaces, awkward phrasing and flow; keep tone: {tone}. "
-        "Keep every heading, link and fact. Do NOT shorten it — keep the same length or longer.\n"
-        + (f"Also apply this reviewer feedback:\n{feedback}\n" if feedback else "")
+        (f"REQUIRED CHANGES — apply every one of these, they override the rules below:\n{feedback}\n\n" if feedback else "")
+        + f"Edit this {LANG[language]} article. Fix grammar, spelling, missing spaces, awkward phrasing and flow; keep tone: {tone}. "
+        "Split any sentence longer than 30 words. Keep the section structure, every link and every fact; "
+        "you may rewrite a heading when a required change asks for it. Do NOT shorten the article.\n"
+        + (f"Focus keyword: \"{focus_keyword}\" — keep it exactly (same words, same order) wherever it appears.\n" if focus_keyword else "")
         + f"\nArticle:\n{blog_md}\n\nOutput only the full edited article in Markdown.",
         "The full edited article in Markdown",
         temperature=0.3,
