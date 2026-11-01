@@ -1,7 +1,7 @@
 # AI Content Agent
 
 Pipeline nhiều agent (CrewAI) tự động sản xuất blog + bài social từ một từ khoá, có MCP server và dashboard để duyệt.
-Tài liệu: [docs/PLAN.md](docs/PLAN.md) · [docs/SPEC.md](docs/SPEC.md) · [docs/LLM_PRICING.md](docs/LLM_PRICING.md) · [tiến độ](docs/progress/README.md)
+Tài liệu: [báo cáo benchmark](docs/report/README.md) · [docs/LLM_PRICING.md](docs/LLM_PRICING.md)
 
 ![Dashboard Content Agent](docs/pic.png)
 

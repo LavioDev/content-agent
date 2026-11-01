@@ -55,7 +55,7 @@ async def _step(job_id: int, agent: str, fn, *args, note: str = ""):
 
 
 def _fixes(c: db.Content) -> list[str]:
-    """Lệnh sửa cụ thể cho Editor. Chỉ nêu tên mục trượt thì Editor không biết sửa gì (xem docs/progress/issues.md #1)."""
+    """Lệnh sửa cụ thể cho Editor. Chỉ nêu tên mục trượt thì Editor không biết sửa gì (xem docs/report/README.md mục 5.1)."""
     kw, d = c.focus_keyword, c.seo_detail
     failed = {i["id"] for i in d["items"] if not i["passed"]}
     target = max(3, round(d["word_count"] * 1.5 / 100 / max(len(kw.split()), 1)))
@@ -78,7 +78,8 @@ def _fixes(c: db.Content) -> list[str]:
                    + "\n".join(f"- [{s['title']}]({s['url']})" for s in c.sources))
     r = d["readability"]
     if not r["passed"]:
-        out.append("Readability is too low. Split each of these long sentences into 2-3 short ones:\n"
+        goal = " Aim for about 15 words per sentence and short common words." if r["language"] == "en" else ""
+        out.append("Readability is too low. Split each of these long sentences into 2-3 short ones:" + goal + "\n"
                    + "\n".join(f"- {s}" for s in r["details"].get("long_examples", [])))
     return out
 

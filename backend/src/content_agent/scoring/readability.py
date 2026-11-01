@@ -7,7 +7,7 @@ from .text import strip_markdown, words
 PASS_SCORE = 60
 # words() tách theo khoảng trắng: tiếng Việt ra ÂM TIẾT (~1.4 âm tiết/từ), tiếng Anh ra từ
 # shortcut: ngưỡng VI chọn theo kinh nghiệm (~16 từ / ~28 từ thật), hiệu chỉnh lại khi có điểm human rating
-LIMITS = {"vi": (22, 40), "en": (20, 35)}  # (câu TB tối đa, ngưỡng câu dài)
+LIMITS = {"vi": (22, 40), "en": (20, 25)}  # (câu TB tối đa, ngưỡng câu dài)
 
 
 def _clamp(x: float) -> float:

@@ -13,7 +13,7 @@ def score_seo(
     image_prompts: list[dict] | None = None,
     language: str = "vi",
 ) -> dict:
-    """Điểm SEO 0-100 theo checklist kiểu Yoast (xem docs/SPEC.md mục 7.1)."""
+    """Điểm SEO 0-100 theo checklist kiểu Yoast (12 tiêu chí, tổng 100 điểm; liệt kê trong docs/report/README.md mục 2)."""
     kw = fold(focus_keyword).strip()
     plain = strip_markdown(markdown)
     n_words = len(words(plain))

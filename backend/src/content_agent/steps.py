@@ -54,6 +54,14 @@ def research(topic: str, audience: str, language: str, num_sources: int = 5):
     return data, usage
 
 
+# (mô tả cho prompt, ngưỡng tách câu của Editor). EN chấm bằng Flesch: cần ~15 từ/câu, câu 20-30 từ cho điểm ~30-40
+SENTENCE = {
+    "en": ("under 15 words on average and never over 22 words, with short common words (\"use\" not \"utilize\") "
+           "and at most 3 sentences per paragraph", 22),
+    "vi": ("under 20 words on average and never over 30 words", 30),
+}
+
+
 def write(research_data: dict, topic: str, audience: str, tone: str, language: str, word_count: int):
     sources = "\n".join(f"- {s['title']} ({s['url']}): {s.get('summary', '')}" for s in research_data["sources"]) or "(none)"
     return llm.run(
@@ -62,7 +70,7 @@ def write(research_data: dict, topic: str, audience: str, tone: str, language: s
         f"Focus keyword: \"{research_data['focus_keyword']}\" (secondary: {', '.join(research_data.get('keywords', []))})\n"
         "Use the focus keyword EXACTLY (same words, same order, nothing inserted) in the H1, in the first sentence "
         "and in one H2, then 3-6 more times in the body.\n"
-        "Whatever the tone, keep sentences short: under 20 words on average and never over 30 words. "
+        f"Whatever the tone, keep sentences short: {SENTENCE[language][0]}. "
         "Tone changes word choice, not sentence length.\n"
         f"Length: AT LEAST {int(word_count * 1.1)} words. Do not stop early.\n"
         "Outline (use as H2 sections, in order):\n"
@@ -80,7 +88,7 @@ def edit(blog_md: str, language: str, tone: str, feedback: str = "", focus_keywo
         "editor",
         (f"REQUIRED CHANGES — apply every one of these, they override the rules below:\n{feedback}\n\n" if feedback else "")
         + f"Edit this {LANG[language]} article. Fix grammar, spelling, missing spaces, awkward phrasing and flow; keep tone: {tone}. "
-        "Split any sentence longer than 30 words. Keep the section structure, every link and every fact; "
+        f"Split any sentence longer than {SENTENCE[language][1]} words. Keep the section structure, every link and every fact; "
         "you may rewrite a heading when a required change asks for it. Do NOT shorten the article.\n"
         + (f"Focus keyword: \"{focus_keyword}\" — keep it exactly (same words, same order) wherever it appears.\n" if focus_keyword else "")
         + f"\nArticle:\n{blog_md}\n\nOutput only the full edited article in Markdown.",
@@ -107,7 +115,8 @@ def seo(blog_md: str, focus_keyword: str, keywords: list[str], language: str):
         "seo",
         f"Optimise this {LANG[language]} article for the focus keyword \"{focus_keyword}\" (secondary: {', '.join(keywords)}).\n"
         "Rules: the H1 contains the exact focus keyword; it appears in the first 100 words and in at least one H2; "
-        "overall density 0.5–2.5%; keep all links; do not shorten the article or change facts.\n"
+        "overall density 0.5–2.5%; keep all links; do not shorten the article or change facts; "
+        "do NOT make sentences longer when inserting the keyword (rewrite the sentence short instead).\n"
         f"Also write meta_title (max 60 characters) and meta_description (130–155 characters, contains the keyword).\n\nArticle:\n{blog_md}\n\n"
         'Return a JSON object with keys "meta_title", "meta_description", "blog_md" (the full optimised Markdown).',
         "A single JSON object",
@@ -119,6 +128,8 @@ def seo(blog_md: str, focus_keyword: str, keywords: list[str], language: str):
         "blog_md": str(data.get("blog_md") or blog_md),
         "slug": slugify(focus_keyword),
     }
+    if len(out["meta_description"]) > 160:  # SEO chấm 120-160 ký tự: cắt ở ranh giới từ thay vì gọi LLM sửa lại
+        out["meta_description"] = out["meta_description"][:155].rsplit(" ", 1)[0].rstrip(",;:- ")
     if len(out["blog_md"]) < 0.7 * len(blog_md):  # model cắt cụt bài -> giữ bản gốc
         out["blog_md"] = blog_md
     return out, usage
