@@ -129,6 +129,9 @@ def get_content(content_id: int) -> dict:
         sched = s.exec(select(db.ScheduleEntry).where(db.ScheduleEntry.content_id == content_id)).all()
         job_ids = s.exec(select(db.Job.id).where(db.Job.content_id == content_id).order_by(db.Job.id)).all()
         return db.to_dict(c) | {
+            # chấm lại lúc đọc: bài cũ cũng có đủ chi tiết highlight mà không cần migrate
+            "seo_detail": score_seo(c.blog_md, c.focus_keyword, c.meta_title, c.meta_description, c.slug,
+                                    c.image_prompts, c.language) if c.blog_md else c.seo_detail,
             "jobs": [get_job(j) for j in job_ids],
             "versions": [{"version": v.version, "created_by": v.created_by, "created_at": v.created_at.isoformat()} for v in versions],
             "reviews": [db.to_dict(r) for r in reviews],

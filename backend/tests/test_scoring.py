@@ -59,6 +59,13 @@ def test_readability_vi_counts_syllables_not_words():
     assert score_readability(" ".join(["âm"] * 50) + ".", "vi")["details"]["long_examples"]
 
 
+def test_readability_paragraphs_flag_long_sentence_and_paragraph():
+    long_s, short = " ".join(["âm"] * 50) + ".", "Câu ngắn."
+    paras = score_readability(f"{long_s} {short}\n\n" + " ".join([short] * 5), "vi")["details"]["paragraphs"]
+    assert paras[0] == {"long": False, "sentences": [[long_s, True], [short, False]]}
+    assert paras[1]["long"] and len(paras[1]["sentences"]) == 5
+
+
 def test_readability_en_uses_flesch():
     r = score_readability("The cat sat on the mat. It was a sunny day. We had fun.", "en")
     assert "flesch_reading_ease" in r["details"] and r["passed"]

@@ -8,7 +8,7 @@ export default defineNuxtConfig({
   modules: ['shadcn-nuxt', '@nuxtjs/color-mode', '@vueuse/nuxt', '@nuxtjs/mdc'],
   css: ['~/assets/css/tailwind.css'],
   vite: { plugins: [tailwindcss()] },
-  colorMode: { classSuffix: '', preference: 'system', fallback: 'light' },
+  colorMode: { classSuffix: '', preference: 'light', fallback: 'light' },
   shadcn: { prefix: '', componentDir: './app/components/ui' },
   // Frontend chỉ nói chuyện với backend qua proxy; không bao giờ giữ API key LLM
   routeRules: { '/api/**': { proxy: 'http://127.0.0.1:8787/api/**' } },

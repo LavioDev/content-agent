@@ -36,6 +36,12 @@ def score_readability(text: str, language: str = "vi") -> dict:
         "long_sentence_ratio": round(long_ratio, 3),
         "long_sentence_limit": long_at,
         "long_examples": [s[:200] for s in long[:5]],  # để Editor biết sửa câu nào
+        # để UI tô câu dài / đoạn dài; cùng regex tách câu nên khớp với phần bị trừ điểm
+        "paragraphs": [
+            {"long": len(ss) > 4, "sentences": [[s.strip(), len(words(s)) > long_at] for s in ss]}
+            for p in paragraphs
+            if (ss := [s for s in re.split(r"(?<=[.!?…])\s+|\n+", p) if words(s)])
+        ],
     }
     if language == "en":
         score = _clamp(textstat.flesch_reading_ease(plain))

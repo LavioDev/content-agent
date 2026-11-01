@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { MoreVertical, Plus, Send, Trash2 } from '@lucide/vue'
+import { Info, MoreVertical, Plus, Send, Trash2, X } from '@lucide/vue'
+import { DialogClose, DialogContent, DialogDescription, DialogOverlay, DialogPortal, DialogRoot, DialogTitle } from 'reka-ui'
 import { toast } from 'vue-sonner'
 import { AGENTS, TONES } from '@/lib/format'
 
@@ -11,12 +12,18 @@ const selectedId = ref<number | null>(null)
 const content = ref<any>(null)
 const job = ref<any>(null) // job đang chạy (từ SSE), ưu tiên hơn job cũ của bài đang xem
 let es: EventSource | null = null
+const detailKind = ref<'seo' | 'readability' | null>(null) // widget điểm đang mở panel giải thích
 
 const steps = computed(() => job.value?.steps ?? content.value?.jobs?.at(-1)?.steps ?? [])
 const progress = computed(() => {
   if (!job.value && !content.value) return null
   return 100 * new Set(steps.value.filter((s: any) => s.status === 'done').map((s: any) => s.agent)).size / AGENTS.length
 })
+
+const scoreWidgets = computed(() => [
+  { kind: 'seo', label: 'Điểm SEO', value: content.value?.seo_score },
+  { kind: 'readability', label: 'Độ dễ đọc', value: content.value?.readability_score },
+] as const)
 
 const seoText = computed(() => {
   const c = content.value
@@ -133,9 +140,31 @@ onBeforeUnmount(() => es?.close())
 
       <div class="grid grid-cols-2 gap-3 lg:grid-cols-3">
         <Ring label="Tiến độ pipeline" :value="progress" />
-        <Ring label="Điểm SEO" :value="content?.seo_score" />
-        <Ring label="Độ dễ đọc" :value="content?.readability_score" />
+        <div v-for="w in scoreWidgets" :key="w.kind" class="relative">
+          <Ring :label="w.label" :value="w.value" />
+          <Button
+            variant="ghost" size="icon" class="absolute top-1.5 right-1.5 size-7 text-muted-foreground"
+            :disabled="!content?.blog_md" :aria-label="`Vì sao ${w.label} như vậy`" title="Xem lý do" @click="detailKind = w.kind"
+          ><Info class="size-4" /></Button>
+        </div>
       </div>
+
+      <DialogRoot :open="!!detailKind && !!content?.blog_md" @update:open="(o) => { if (!o) detailKind = null }">
+        <DialogPortal>
+          <DialogOverlay class="fixed inset-0 z-50 bg-black/50" />
+          <DialogContent class="fixed top-1/2 left-1/2 z-50 flex max-h-[85vh] w-[calc(100%-2rem)] max-w-3xl -translate-x-1/2 -translate-y-1/2 flex-col gap-3 overflow-y-auto rounded-xl border bg-background p-4 shadow-lg">
+            <div class="flex items-center justify-between">
+              <DialogTitle class="font-semibold">{{ detailKind === 'seo' ? 'Vì sao điểm SEO như vậy' : 'Vì sao độ dễ đọc như vậy' }}</DialogTitle>
+              <DialogClose as-child><Button variant="ghost" size="icon" class="size-7" aria-label="Đóng"><X class="size-4" /></Button></DialogClose>
+            </div>
+            <DialogDescription class="sr-only">Văn bản được bôi màu theo từng tiêu chí chấm điểm</DialogDescription>
+            <ScoreDetail
+              v-if="detailKind && content?.blog_md"
+              :kind="detailKind" :detail="content.seo_detail" :md="content.blog_md" :keyword="content.focus_keyword ?? ''"
+            />
+          </DialogContent>
+        </DialogPortal>
+      </DialogRoot>
 
       <div v-if="content" class="space-y-3">
         <h1 class="text-lg font-semibold">{{ content.meta_title || content.topic }}</h1>
